@@ -1,20 +1,13 @@
 #pragma once
 
+#include "type.hpp"
+
 #include <chrono>
 #include <string>
 #include <cstdint>
 
 namespace proxy_scheduler
 {
-    using NodeId = std::uint32_t;
-
-    enum class NodeStatus
-    {
-        Healthy,
-        Unhealthy,
-        Draining
-    };
-
     struct Node
     {
         NodeId node_id;
@@ -30,5 +23,4 @@ namespace proxy_scheduler
 
         std::chrono::steady_clock::time_point last_heartbeat;
     };
-
 }
