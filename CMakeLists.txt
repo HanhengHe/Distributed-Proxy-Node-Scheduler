@@ -13,6 +13,7 @@ add_executable(proxy_scheduler
     control-plane/src/http_server.cpp
     control-plane/src/node_registry.cpp
     control-plane/src/health_checker.cpp
+    control-plane/src/scheduler.cpp
 )
 
 target_include_directories(proxy_scheduler PRIVATE
