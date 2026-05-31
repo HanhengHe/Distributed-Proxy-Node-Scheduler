@@ -20,13 +20,12 @@ namespace proxy_scheduler
     {
     }
 
-    bool node_id_checker(std::int64_t raw_node_id)
+    bool is_valid_node_id(std::int64_t raw_node_id)
     {
         return raw_node_id >= 0 &&
                raw_node_id <= static_cast<std::int64_t>(
                                   std::numeric_limits<NodeId>::max());
     }
-}
 
 void HttpSession::start()
 {
@@ -110,6 +109,13 @@ void HttpSession::handle_request()
 
         try
         {
+            auto *node_id_value = obj.if_contains("node_id");
+            if (!node_id_value || !node_id_value->is_int64())
+            {
+                make_error(http::status::bad_request, "missing or invalid node_id field");
+                return;
+            }
+
             const auto raw_node_id = node_id_value->as_int64();
 
             if (!is_valid_node_id(raw_node_id))
