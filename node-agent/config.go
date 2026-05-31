@@ -28,8 +28,8 @@ func LoadConfig() (*Config, error) {
 	}
 	nodeID := uint32(nodeID64)
 
-	region := os.Getenv("REGION", "ca-central")
-	host := os.Getenv("HOST", "127.0.0.1")
+	region := getenv("REGION", "ca-central")
+	host := getenv("HOST", "127.0.0.1")
 
 	port, err := getUint16Env("PORT", 9001)
 	if err != nil {
@@ -50,7 +50,7 @@ func LoadConfig() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid REQUEST_TIMEOUT: %v", err)
 	}
-	controlPlaneURL := os.Getenv("CONTROL_PLANE_URL", "http://localhost:8080")
+	controlPlaneURL := getenv("CONTROL_PLANE_URL", "http://localhost:8080")
 
 	return &Config{
 		NodeID:            	nodeID,
@@ -62,4 +62,50 @@ func LoadConfig() (*Config, error) {
 		HeartbeatInterval:  heartbeatInterval,
 		RequestTimeout:     requestTimeout,
 	}, nil
+}
+
+func getenv(key string, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	return value
+}
+
+func getUint16Env(key string, defaultValue uint16) (uint16, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue, nil
+	}
+
+	parsed, err := strconv.ParseUint(value, 10, 16)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint16(parsed), nil
+}
+
+func getUint32Env(key string, defaultValue uint32) (uint32, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue, nil
+	}
+
+	parsed, err := strconv.ParseUint(value, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint32(parsed), nil
+}
+
+func getDurationEnv(key string, defaultValue time.Duration) (time.Duration, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue, nil
+	}
+
+	return time.ParseDuration(value)
 }

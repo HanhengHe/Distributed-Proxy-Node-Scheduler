@@ -7,16 +7,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 )
 
 type IClient interface {
-	Register(ctx context.Context, req *RegisterRequest) error
-	Heartbeat(ctx context.Context, req *HeartbeatRequest) error
-	Schedule(ctx context.Context, req *ScheduleRequest) (uint32, error)
-	Drain(ctx context.Context, req *DrainRequest) error
-	Remove(ctx context.Context, req *RemoveRequest) error
+	Register(ctx context.Context, req *RegisterRequest) (RegisterResponse, error)
+	Heartbeat(ctx context.Context, req *HeartbeatRequest) (HeartbeatResponse, error)
+	GetLatency(ctx context.Context, nodeID uint32) (uint32, error)
+	Schedule(ctx context.Context, req *ScheduleRequest) (ScheduleResponse, error)
+	Drain(ctx context.Context, req *DrainRequest) (DrainResponse, error)
+	Remove(ctx context.Context, req *RemoveRequest) (RemoveResponse, error)
 }
 
 type Client struct {
@@ -33,14 +33,50 @@ func NewClient(baseURL string, timeout time.Duration) *Client {
 	}
 }
 
-func (c *Client) Register(ctx context.Context, req *RegisterRequest) error {
+func (c *Client) Register(ctx context.Context, req *RegisterRequest) (RegisterResponse, error) {
 	var resp RegisterResponse
-	return c.postJSON(ctx, "/nodes/register", req, &resp)
+	err := c.postJSON(ctx, "/nodes/register", req, &resp)
+	if err != nil {
+		return RegisterResponse{}, err
+	}
+
+	return resp, nil
 }
 
-func (c *Client) Heartbeat(ctx context.Context, req *HeartbeatRequest) error {
+func (c *Client) Heartbeat(ctx context.Context, req *HeartbeatRequest) (HeartbeatResponse, error) {
 	var resp HeartbeatResponse
-	return c.postJSON(ctx, "/nodes/heartbeat", req, &resp)
+	err := c.postJSON(ctx, "/nodes/heartbeat", req, &resp)
+	if err != nil {
+		return HeartbeatResponse{}, err
+	}
+
+	return resp, nil
+}
+
+func (c *Client) GetLatency(ctx context.Context, nodeID uint32) (uint32, error) {
+	url := c.baseURL + "/health"
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create HTTP request: %v", err)
+	}
+
+	start := time.Now()
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return 0, fmt.Errorf("HTTP request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	latency := uint32(time.Since(start).Milliseconds())
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return 0, fmt.Errorf("HTTP request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	if latency < 1 {
+		latency = 1
+	}
+	return latency, nil
 }
 
 func (c *Client) Schedule(ctx context.Context, req *ScheduleRequest) (ScheduleResponse, error) {
@@ -54,14 +90,24 @@ func (c *Client) Schedule(ctx context.Context, req *ScheduleRequest) (ScheduleRe
 	return schedule, nil
 }
 
-func (c *Client) Drain(ctx context.Context, req *DrainRequest) error {
+func (c *Client) Drain(ctx context.Context, req *DrainRequest) (DrainResponse, error) {
 	var resp DrainResponse
-	return c.postJSON(ctx, "/nodes/drain", req, &resp)
+	err := c.postJSON(ctx, "/nodes/drain", req, &resp)
+	if err != nil {
+		return DrainResponse{}, err
+	}
+
+	return resp, nil
 }
 
-func (c *Client) Remove(ctx context.Context, req *RemoveRequest) error {
+func (c *Client) Remove(ctx context.Context, req *RemoveRequest) (RemoveResponse, error) {
 	var resp RemoveResponse
-	return c.postJSON(ctx, "/nodes/remove", req, &resp)
+	err := c.postJSON(ctx, "/nodes/remove", req, &resp)
+	if err != nil {
+		return RemoveResponse{}, err
+	}
+
+	return resp, nil
 }
 
 func (c *Client) postJSON(ctx context.Context, path string, payload any, response any) error {
