@@ -12,6 +12,7 @@ type Config struct {
 	Region         		string
 	Host           		string
 	Port           		uint16
+	CurrentLoad    		uint32
 	MaxCapacity    		uint32
 	ControlPlaneURL 	string
 	HeartbeatInterval 	time.Duration
@@ -36,6 +37,11 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("invalid PORT: %v", err)
 	}
 
+	currentLoad, err := getUint32Env("CURRENT_LOAD", 0)
+	if err != nil {
+		return nil, fmt.Errorf("invalid CURRENT_LOAD: %v", err)
+	}
+
 	maxCapacity, err := getUint32Env("MAX_CAPACITY", 100)
 	if err != nil {
 		return nil, fmt.Errorf("invalid MAX_CAPACITY: %v", err)
@@ -57,6 +63,7 @@ func LoadConfig() (*Config, error) {
 		Region:             region,
 		Host:               host,
 		Port:               port,
+		CurrentLoad:        currentLoad,
 		MaxCapacity:        maxCapacity,
 		ControlPlaneURL:    controlPlaneURL,
 		HeartbeatInterval:  heartbeatInterval,
